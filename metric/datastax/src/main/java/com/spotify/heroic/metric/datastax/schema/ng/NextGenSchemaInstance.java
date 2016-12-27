@@ -28,13 +28,14 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
 import com.spotify.heroic.metric.datastax.schema.AbstractSchemaInstance;
 import com.spotify.heroic.metric.datastax.schema.BackendKeyUtils;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
+
 import eu.toolchain.async.Transform;
-import lombok.Data;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,6 +43,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import lombok.Data;
 
 @Data
 public class NextGenSchemaInstance extends AbstractSchemaInstance {
@@ -105,24 +108,16 @@ public class NextGenSchemaInstance extends AbstractSchemaInstance {
     }
 
     @Override
-    public List<PreparedFetch> ranges(final Series series, final DateRange range)
+    public List<PreparedFetch> ranges(final Series series, final TimeRange range)
         throws IOException {
         final List<PreparedFetch> bases = new ArrayList<>();
 
-        final long start = calculateBaseTimestamp(range.getStart());
-        final long end = calculateBaseTimestamp(range.getEnd());
-
-        for (long currentBase = start; currentBase <= end; currentBase += MAX_WIDTH) {
-            final DateRange modified = range.modify(currentBase, currentBase + MAX_WIDTH);
-
-            if (modified.isEmpty()) {
-                continue;
-            }
-
-            final ByteBuffer key = ROW_KEY.serialize(new MetricsRowKey(series, currentBase));
+        for (TimeRange period : range.splitAtPeriodBoundary(MAX_WIDTH)) {
+            DateRange modified = period.asClosedStartDateRange();
+            final long base = calculateBaseTimestamp(modified.getStart());
+            final ByteBuffer key = ROW_KEY.serialize(new MetricsRowKey(series, base));
             final int startColumn = calculateColumnKey(modified.start());
             final int endColumn = calculateColumnKey(modified.end());
-            final long base = currentBase;
 
             bases.add(new PreparedFetch() {
                 @Override

@@ -27,9 +27,9 @@ import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterShard;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.querylogging.QueryContext;
 
@@ -117,7 +117,7 @@ public final class FullQuery {
     public static class Request {
         private final MetricType source;
         private final Filter filter;
-        private final DateRange range;
+        private final TimeRange range;
         private final AggregationInstance aggregation;
         private final QueryOptions options;
         private final QueryContext context;
@@ -131,7 +131,7 @@ public final class FullQuery {
         public class Summary {
             private final MetricType source;
             private final Filter filter;
-            private final DateRange range;
+            private final TimeRange range;
             private final AggregationInstance aggregation;
             private final QueryOptions options;
         }

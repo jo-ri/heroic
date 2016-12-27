@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
@@ -32,6 +31,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.common.TimeRange;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -55,7 +55,7 @@ public class ChainInstance implements AggregationInstance {
      * The last aggregation in the chain determines the estimated number of samples.
      */
     @Override
-    public long estimate(DateRange range) {
+    public long estimate(TimeRange range) {
         return chain.get(chain.size() - 1).estimate(range);
     }
 
@@ -138,7 +138,7 @@ public class ChainInstance implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(final DateRange range, final RetainQuotaWatcher watcher) {
+    public AggregationSession session(final TimeRange range, final RetainQuotaWatcher watcher) {
         final Iterator<AggregationInstance> it = chain.iterator();
 
         final AggregationInstance first = it.next();

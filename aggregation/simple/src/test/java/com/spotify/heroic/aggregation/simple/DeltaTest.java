@@ -1,8 +1,9 @@
 package com.spotify.heroic.aggregation.simple;
 
 import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.common.TimeRange;
+
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -12,7 +13,8 @@ import static org.junit.Assert.assertEquals;
 public class DeltaTest {
 
     final private DeltaInstance deltaInstance = new DeltaInstance();
-    final private AggregationSession session = deltaInstance.session(new DateRange(0, 10000));
+    final private AggregationSession session =
+        deltaInstance.session(TimeRange.withOpenStart(0, 10000));
 
     @Test
     public void testComputePositiveDeltas() throws Exception {

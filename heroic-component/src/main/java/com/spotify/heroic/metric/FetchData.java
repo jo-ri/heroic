@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.TimeRange;
 
 import eu.toolchain.async.Collector;
 
@@ -122,7 +122,7 @@ public class FetchData {
     public static class Request {
         private final MetricType type;
         private final Series series;
-        private final DateRange range;
+        private final TimeRange range;
         private final QueryOptions options;
     }
 

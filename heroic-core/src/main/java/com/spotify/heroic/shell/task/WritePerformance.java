@@ -25,7 +25,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 
 import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.FetchData;
@@ -34,6 +33,7 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -95,7 +95,7 @@ public class WritePerformance implements ShellTask {
         final long startRange =
             now.getTime() - TimeUnit.MILLISECONDS.convert(params.history, TimeUnit.SECONDS);
         final long endRange = now.getTime();
-        final DateRange range = new DateRange(startRange, endRange);
+        final TimeRange range = TimeRange.withOpenStart(startRange, endRange);
 
         final MetricBackendGroup readGroup = metrics.useGroup(params.from);
         final List<MetricBackend> targets = resolveTargets(params.targets);

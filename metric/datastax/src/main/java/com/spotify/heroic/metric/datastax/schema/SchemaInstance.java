@@ -23,10 +23,10 @@ package com.spotify.heroic.metric.datastax.schema;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Row;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
@@ -39,7 +39,7 @@ import java.util.List;
 public interface SchemaInstance {
     public TypeSerializer<MetricsRowKey> rowKey();
 
-    public List<PreparedFetch> ranges(final Series series, final DateRange range)
+    public List<PreparedFetch> ranges(final Series series, final TimeRange range)
         throws IOException;
 
     public PreparedFetch row(final BackendKey key) throws IOException;

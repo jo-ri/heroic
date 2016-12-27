@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
@@ -32,6 +31,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.common.TimeRange;
 
 import java.util.List;
 import java.util.Map;
@@ -74,7 +74,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
     );
 
     @Override
-    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
+    public AggregationSession session(TimeRange range, RetainQuotaWatcher quotaWatcher) {
         return new GroupSession(range, quotaWatcher);
     }
 
@@ -83,7 +83,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @Override
-    public long estimate(DateRange range) {
+    public long estimate(TimeRange range) {
         return -1;
     }
 
@@ -114,7 +114,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
             new ConcurrentHashMap<>();
         private final Object lock = new Object();
 
-        private final DateRange range;
+        private final TimeRange range;
         private final RetainQuotaWatcher quotaWatcher;
 
         @Override

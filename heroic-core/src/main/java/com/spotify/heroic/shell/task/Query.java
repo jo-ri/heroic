@@ -99,11 +99,18 @@ public class Query implements ShellTask {
         final Optional<QueryDateRange> range =
             Optional.of(new QueryDateRange.Relative(TimeUnit.DAYS, 1));
 
-        QueryBuilder queryBuilder =
-            query.newQueryFromString(queryString).options(options).rangeIfAbsent(range);
+        List<Feature> features = new ArrayList<>();
         if (params.slicedDataFetch) {
-            queryBuilder.features(Optional.of(FeatureSet.of(Feature.SLICED_DATA_FETCH)));
+            features.add(Feature.SLICED_DATA_FETCH);
         }
+        if (params.rangeClosedStart) {
+            features.add(Feature.QUERY_RANGE_CLOSED_START);
+        }
+        QueryBuilder queryBuilder = query
+            .newQueryFromString(queryString)
+            .options(options)
+            .rangeIfAbsent(range)
+            .features(Optional.of(FeatureSet.of(features.toArray(new Feature[0]))));
         return query
             .useGroup(params.group)
             .query(queryBuilder.build(), queryContext)
@@ -147,6 +154,9 @@ public class Query implements ShellTask {
 
         @Option(name = "--sliced-data-fetch", usage = "Enable sliced data fetch")
         private boolean slicedDataFetch = false;
+
+        @Option(name = "--range-closed-start", usage = "Range start is inclusive")
+        private boolean rangeClosedStart = false;
 
         @Option(name = "--fetch-size", usage = "Set the number of entries to fetch for every slice")
         private Optional<Integer> fetchSize = Optional.empty();

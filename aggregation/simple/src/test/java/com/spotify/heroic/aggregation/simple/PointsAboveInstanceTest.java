@@ -24,9 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.*;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.common.TimeRange;
+
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -56,7 +57,7 @@ public class PointsAboveInstanceTest {
         states.add(s2);
         states.add(s3);
 
-        final AggregationSession session = a1.session(new DateRange(0, 10000));
+        final AggregationSession session = a1.session(TimeRange.withOpenStart(0, 10000));
 
         session.updatePoints(s1.getTags(), ImmutableSet.of(s1),
             ImmutableList.of(new Point(2, 2.0), new Point(3, 2.0)));

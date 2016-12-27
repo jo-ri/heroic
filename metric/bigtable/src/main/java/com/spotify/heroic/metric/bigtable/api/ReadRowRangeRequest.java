@@ -29,6 +29,6 @@ import lombok.Data;
 public final class ReadRowRangeRequest {
     private final ByteString rowKey;
     private final String columnFamily;
-    private final ByteString startQualifierOpen;
-    private final ByteString endQualifierClosed;
+    private final ByteString startQualifierClosed;
+    private final ByteString endQualifierOpen;
 }

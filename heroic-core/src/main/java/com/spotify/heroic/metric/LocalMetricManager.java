@@ -40,6 +40,7 @@ import com.spotify.heroic.common.QuotaViolationException;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -162,7 +163,7 @@ public class LocalMetricManager implements MetricManager {
             final MetricType source = request.getSource();
             final QueryOptions options = request.getOptions();
             final AggregationInstance aggregation = request.getAggregation();
-            final DateRange range = request.getRange();
+            final TimeRange range = request.getRange();
             final QueryContext queryContext = request.getContext();
 
             queryLogger.logIncomingRequestAtNode(queryContext, request);
@@ -280,7 +281,8 @@ public class LocalMetricManager implements MetricManager {
             };
 
             return metadata
-                .findSeries(new FindSeries.Request(filter, range, seriesLimit))
+                .findSeries(
+                    new FindSeries.Request(filter, range.asOpenStartDateRange(), seriesLimit))
                 .onDone(reporter.reportFindSeries())
                 .lazyTransform(transform)
                 .directTransform(fullQuery -> {

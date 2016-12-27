@@ -1,25 +1,9 @@
 package com.spotify.heroic;
 
-import static com.spotify.heroic.test.Data.points;
-import static com.spotify.heroic.test.Matchers.containsChild;
-import static com.spotify.heroic.test.Matchers.hasIdentifier;
-import static com.spotify.heroic.test.Matchers.identifierContains;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Series;
@@ -38,7 +22,13 @@ import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.querylogging.QueryLogger;
+
 import eu.toolchain.async.AsyncFuture;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,9 +36,24 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+
+import static com.spotify.heroic.test.Data.points;
+import static com.spotify.heroic.test.Matchers.containsChild;
+import static com.spotify.heroic.test.Matchers.hasIdentifier;
+import static com.spotify.heroic.test.Matchers.identifierContains;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+
 
 public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
@@ -143,7 +148,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         builder
             .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(MetricType.POINT))
-            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)));
+            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(0, 30)));
 
         modifier.accept(builder);
         return query.useDefaultGroup().query(builder.build(), queryContext).get();
@@ -275,7 +280,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 1D).p(30, 1D).build()), m);
     }
 
     @Test
@@ -289,7 +294,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 1D).p(30, 1D).build()), m);
     }
 
     @Test

@@ -23,7 +23,7 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.TimeRange;
 
 import java.util.Set;
 
@@ -46,7 +46,7 @@ public interface AggregationInstance {
      * @return Estimated number of metrics that must be retained for the aggregation,
      * or {@code -1} if not known.
      */
-    long estimate(DateRange range);
+    long estimate(TimeRange range);
 
     /**
      * Get the cadence of the current aggregation.
@@ -60,14 +60,14 @@ public interface AggregationInstance {
     /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
-    default AggregationSession session(DateRange range) {
+    default AggregationSession session(TimeRange range) {
         return session(range, RetainQuotaWatcher.NO_QUOTA);
     }
 
     /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
-    AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher);
+    AggregationSession session(TimeRange range, RetainQuotaWatcher quotaWatcher);
 
     /**
      * Get the distributed aggregation that is relevant for this aggregation.
