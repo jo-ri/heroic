@@ -45,12 +45,14 @@ import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
+import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -208,12 +210,25 @@ public abstract class AbstractMetricBackendIT {
     ) throws Exception {
         backend.write(new WriteMetric.Request(s1, input)).get();
 
+        // Test legacy code path for reading
         FetchData data = backend
             .fetch(new FetchData.Request(expected.getType(), s1, range,
                 QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA)
             .get();
 
         assertEquals(ImmutableSet.of(expected), ImmutableSet.copyOf(data.getGroups()));
+
+        // Test consumer code path for reading
+        Consumer<MetricCollection> metricsConsumer = (metricCollection) -> {
+            assertEquals(expected, metricCollection);
+        };
+        backend
+            .fetch(new FetchData.Request(expected.getType(), s1, range,
+                QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA, metricsConsumer)
+            .onFailed(throwable -> {
+                throw new RuntimeException("Failed while reading");
+            })
+            .get();
     }
 
     private TestCase newCase() {
