@@ -23,16 +23,21 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.querylogging.QueryContext;
+
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+
 import java.util.List;
+
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -116,6 +121,7 @@ public final class FullQuery {
         private final AggregationInstance aggregation;
         private final QueryOptions options;
         private final QueryContext context;
+        private final Features features;
 
         public Summary summarize() {
             return new Summary(source, filter, range, aggregation, options);

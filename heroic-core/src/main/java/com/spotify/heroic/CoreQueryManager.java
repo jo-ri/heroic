@@ -249,7 +249,7 @@ public class CoreQueryManager implements QueryManager {
 
             final FullQuery.Request request =
                 new FullQuery.Request(source, filter, range, aggregationInstance, options,
-                    queryContext);
+                    queryContext, features);
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);
 
