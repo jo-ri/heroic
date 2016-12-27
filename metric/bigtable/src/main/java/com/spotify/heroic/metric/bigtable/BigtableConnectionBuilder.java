@@ -22,11 +22,14 @@
 package com.spotify.heroic.metric.bigtable;
 
 import com.google.appengine.repackaged.com.google.common.collect.ImmutableList;
+import com.google.bigtable.v2.BigtableGrpc;
+import com.google.bigtable.v2.BigtableGrpc.Bigtable;
 import com.google.cloud.bigtable.config.BigtableOptions;
 import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
+import com.google.cloud.bigtable.grpc.io.ChannelPool;
 
 import com.spotify.heroic.bigtable.grpc.Status;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
@@ -42,6 +45,7 @@ import eu.toolchain.async.AsyncFuture;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -96,11 +100,17 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final BigtableMutator mutator =
             new BigtableMutatorImpl(async, session, disableBulkMutations, flushIntervalSeconds);
 
+        final ChannelPool channelPool =
+            BigtableSession.createChannelPool(options.getDataHost(), options,
+                options.getChannelCount());
+
+        final Bigtable bigtable = BigtableGrpc.newStub(channelPool);
+
         final BigtableDataClient client =
-            new BigtableDataClientImpl(async, session, mutator, project, instance,
+            new BigtableDataClientImpl(async, session, mutator, bigtable, project, instance,
                 defaultFetchSize);
 
-        return new GrpcBigtableConnection(async, project, instance, session, mutator,
+        return new GrpcBigtableConnection(async, project, instance, session, channelPool, mutator,
             adminClient, client);
     }
 
@@ -112,6 +122,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         private final String instance;
 
         final BigtableSession session;
+        final ChannelPool channelPool;
         final BigtableMutator mutator;
         final BigtableTableAdminClient tableAdminClient;
         final BigtableDataClient dataClient;
@@ -132,8 +143,13 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
                 session.close();
                 return null;
             });
-
-            return async.collectAndDiscard(ImmutableList.of(mutator.close(), closeSession));
+            final AsyncFuture<Void> shutdownChannelPool = async.call(() -> {
+                channelPool.shutdown();
+                channelPool.awaitTermination(10, TimeUnit.SECONDS);
+                return null;
+            });
+            return async.collectAndDiscard(
+                ImmutableList.of(mutator.close(), closeSession, shutdownChannelPool));
         }
     }
 }

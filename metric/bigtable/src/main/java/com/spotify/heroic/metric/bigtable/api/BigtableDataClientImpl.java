@@ -21,18 +21,21 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.bigtable.v2.BigtableGrpc.Bigtable;
 import com.google.bigtable.v2.ReadModifyWriteRowRequest;
+import com.google.bigtable.v2.ReadRowsResponse;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.cloud.bigtable.grpc.scanner.ResultScanner;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
 
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.bigtable.grpc.stub.StreamObserver;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -41,6 +44,7 @@ import eu.toolchain.async.ResolvableFuture;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -52,18 +56,20 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     private final AsyncFramework async;
     private final com.google.cloud.bigtable.grpc.BigtableSession session;
     private final BigtableMutator mutator;
+    private final Bigtable bigtable;
     private final Optional<Integer> defaultFetchSize;
     private final LimitedCellsRequestEmitter rangeReader;
     private final String clusterUri;
 
     public BigtableDataClientImpl(
         final AsyncFramework async, final com.google.cloud.bigtable.grpc.BigtableSession session,
-        final BigtableMutator mutator, final String project,
+        final BigtableMutator mutator, final Bigtable bigtable, final String project,
         final String cluster, final Optional<Integer> defaultFetchSize
     ) {
         this.async = async;
         this.session = session;
         this.mutator = mutator;
+        this.bigtable = bigtable;
         this.defaultFetchSize = defaultFetchSize;
         this.rangeReader = new LimitedCellsRequestEmitter(this::issueReadRowsRequest, async);
         this.clusterUri = String.format("projects/%s/instances/%s", project, cluster);
@@ -98,18 +104,29 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     private ListenableFuture<?> issueReadRowsRequest(
         final com.google.bigtable.v2.ReadRowsRequest request, final CellConsumer cellConsumer
     ) {
-        return Futures.transform(session.getDataClient().readFlatRowsAsync(request),
-            new Function<List<FlatRow>, Object>() {
+        Consumer<List<ReadRowsResponse.CellChunk>> commitCells =
+            cells -> cellConsumer.consume(cells, c -> c.getQualifier().getValue(),
+                ReadRowsResponse.CellChunk::getValue);
+        SettableFuture future = SettableFuture.create();
+        bigtable.readRows(request, new StreamObserver<ReadRowsResponse>() {
+            private CellChunkHandler cellChunkHandler = new CellChunkHandler(commitCells);
 
-                @Override
-                public Object apply(final List<FlatRow> flatRows) {
-                    flatRows
-                        .stream()
-                        .forEach(flatRow -> cellConsumer.consume(flatRow.getCells(),
-                            FlatRow.Cell::getQualifier, FlatRow.Cell::getValue));
-                    return null;
-                }
-            });
+            @Override
+            public void onNext(final ReadRowsResponse response) {
+                cellChunkHandler = cellChunkHandler.consumeChunks(response.getChunksList());
+            }
+
+            @Override
+            public void onError(final Throwable throwable) {
+                future.setException(throwable);
+            }
+
+            @Override
+            public void onCompleted() {
+                future.set(null);
+            }
+        });
+        return future;
     }
 
     @Override
