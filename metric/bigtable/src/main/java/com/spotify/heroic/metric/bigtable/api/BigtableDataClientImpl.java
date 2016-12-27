@@ -202,5 +202,4 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
         return future;
     }
-
 }
