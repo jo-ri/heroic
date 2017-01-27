@@ -29,7 +29,6 @@ import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
@@ -40,6 +39,7 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.WriteMetric;
 
 import org.junit.Rule;
@@ -67,6 +67,8 @@ public abstract class AbstractMetricBackendIT {
     protected final Series s1 = Series.of("s1", ImmutableMap.of("id", "s1"));
     protected final Series s2 = Series.of("s2", ImmutableMap.of("id", "s2"));
     protected final Series s3 = Series.of("s3", ImmutableMap.of("id", "s3"));
+    protected final Series s4 = Series.of("s4", ImmutableMap.of("id", "s4"));
+    protected final Series s5 = Series.of("s5", ImmutableMap.of("id", "s5"));
 
     protected MetricBackend backend;
 
@@ -115,7 +117,7 @@ public abstract class AbstractMetricBackendIT {
         backend.write(new WriteMetric.Request(s1, points)).get();
 
         FetchData.Request request =
-            new FetchData.Request(MetricType.POINT, s1, new DateRange(10000L, 200000L),
+            new FetchData.Request(MetricType.POINT, s1, TimeRange.withOpenStart(10000L, 200000L),
                 QueryOptions.builder().build());
 
         assertEqualMetrics(points, fetchMetrics(request, true));
@@ -135,7 +137,7 @@ public abstract class AbstractMetricBackendIT {
         backend.write(new WriteMetric.Request(s2, mc)).get();
 
         FetchData.Request request =
-            new FetchData.Request(MetricType.POINT, s2, new DateRange(10000L, 200000L),
+            new FetchData.Request(MetricType.POINT, s2, TimeRange.withOpenStart(10000L, 200000L),
                 QueryOptions.builder().fetchSize(fetchSize).build());
 
         assertEqualMetrics(mc, fetchMetrics(request, true));
@@ -146,8 +148,7 @@ public abstract class AbstractMetricBackendIT {
         Random random = new Random(1);
 
         Points points = Data.points();
-        // timestamps [1, Long.MAX_VALUE] since we can't fetch 0 (range start is exclusive)
-        long timestamp = 1;
+        long timestamp = 0;
         while (timestamp > 0) {
             points.p(timestamp, random.nextDouble());
             timestamp += Math.abs(random.nextLong() / 100000);
@@ -157,12 +158,41 @@ public abstract class AbstractMetricBackendIT {
         backend.write(new WriteMetric.Request(s3, mc)).get();
 
         FetchData.Request request =
-            new FetchData.Request(MetricType.POINT, s3, new DateRange(0, Long.MAX_VALUE),
+            new FetchData.Request(MetricType.POINT, s3, TimeRange.withClosedStart(0, Long.MAX_VALUE),
                 QueryOptions.builder().build());
 
         assertEqualMetrics(mc, fetchMetrics(request, true));
         assertEqualMetrics(mc, fetchMetrics(request, false));
     }
+
+    @Test
+    public void testWriteAndFetchRangeClosedStart() throws Exception {
+        MetricCollection firstPoint = Data.points().p(1, 42D).build();
+        backend.write(new WriteMetric.Request(s4, firstPoint)).get();
+        backend.write(new WriteMetric.Request(s4,  Data.points().p(2, 42D).build())).get();
+
+        FetchData.Request request =
+            new FetchData.Request(MetricType.POINT, s4, TimeRange.withClosedStart(1, 2),
+                QueryOptions.builder().build());
+
+        assertEqualMetrics(firstPoint, fetchMetrics(request, true));
+        assertEqualMetrics(firstPoint, fetchMetrics(request, false));
+    }
+
+    @Test
+    public void testWriteAndFetchRangeOpenStart() throws Exception {
+        MetricCollection secondPoint = Data.points().p(2, 42D).build();
+        backend.write(new WriteMetric.Request(s5, Data.points().p(1, 42D).build())).get();
+        backend.write(new WriteMetric.Request(s5, secondPoint)).get();
+
+        FetchData.Request request =
+            new FetchData.Request(MetricType.POINT, s5, TimeRange.withOpenStart(1, 2),
+                QueryOptions.builder().build());
+        
+        assertEqualMetrics(secondPoint, fetchMetrics(request, true));
+        assertEqualMetrics(secondPoint, fetchMetrics(request, false));
+    }
+
 
     private List<MetricCollection> fetchMetrics(FetchData.Request request, boolean slicedFetch)
         throws Exception {

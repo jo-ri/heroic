@@ -9,9 +9,10 @@ import com.spotify.heroic.aggregation.ChainInstance;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.aggregation.GroupInstance;
 import com.spotify.heroic.aggregation.GroupingAggregation;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.common.TimeRange;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,7 +48,7 @@ public class FilterKAreaAggregationTest {
         series.add(s3);
         series.add(s4);
 
-        final AggregationSession session = b1.session(new DateRange(0, 10000));
+        final AggregationSession session = b1.session(TimeRange.withOpenStart(0, 10000));
 
         session.updatePoints(s1.getTags(), series,
             ImmutableList.of(new Point(1, 1.0), new Point(2, 1.0)));

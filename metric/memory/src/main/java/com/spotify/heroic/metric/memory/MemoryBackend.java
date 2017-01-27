@@ -39,6 +39,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.WriteMetric;
 
 import eu.toolchain.async.AsyncFramework;
@@ -176,7 +177,7 @@ public class MemoryBackend extends AbstractMetricBackend {
     }
 
     private MetricCollection doFetch(
-        final MemoryKey key, final DateRange range, final FetchQuotaWatcher watcher
+        final MemoryKey key, final TimeRange range, final FetchQuotaWatcher watcher
     ) {
         final NavigableMap<Long, Metric> tree = storage.get(key);
 
@@ -185,7 +186,9 @@ public class MemoryBackend extends AbstractMetricBackend {
         }
 
         synchronized (tree) {
-            final Iterable<Metric> metrics = tree.subMap(range.getStart(), range.getEnd()).values();
+            DateRange closedStartRange = range.asClosedStartDateRange();
+            final Iterable<Metric> metrics =
+                tree.subMap(closedStartRange.getStart(), closedStartRange.getEnd()).values();
             final List<Metric> data = ImmutableList.copyOf(metrics);
             watcher.readData(data.size());
             return MetricCollection.build(key.getSource(), data);

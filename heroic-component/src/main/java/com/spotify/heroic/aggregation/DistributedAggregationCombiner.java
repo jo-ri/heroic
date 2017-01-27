@@ -23,16 +23,18 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.common.DateRange;
+
 import com.spotify.heroic.metric.ShardedResultGroup;
-import lombok.Data;
+import com.spotify.heroic.common.TimeRange;
 
 import java.util.List;
+
+import lombok.Data;
 
 @Data
 public class DistributedAggregationCombiner implements AggregationCombiner {
     private final AggregationInstance reducer;
-    private final DateRange range;
+    private final TimeRange range;
 
     @Override
     public List<ShardedResultGroup> combine(

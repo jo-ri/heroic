@@ -23,7 +23,6 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.FetchData;
@@ -33,6 +32,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -94,7 +94,7 @@ public class Fetch implements ShellTask {
         final long end =
             params.end.map(t -> Tasks.parseInstant(t, now)).orElseGet(() -> defaultEnd(start));
 
-        final DateRange range = new DateRange(start, end);
+        final TimeRange range = TimeRange.withOpenStart(start, end);
 
         final DateFormat flip = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         final DateFormat point = new SimpleDateFormat("HH:mm:ss.SSS");

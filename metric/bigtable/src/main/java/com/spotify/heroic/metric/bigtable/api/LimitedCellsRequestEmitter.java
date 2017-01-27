@@ -80,15 +80,14 @@ class LimitedCellsRequestEmitter {
 
         @Override
         public void onSuccess(final Object object) {
-            if (consumedCells < fetchSize || lastQualifierRef == null ||
-                rowRequest.getEndQualifierClosed().equals(lastQualifierRef)) {
+            if (consumedCells < fetchSize || lastQualifierRef == null) {
                 log.debug("Read rows completed");
                 future.resolve(null);
             } else {
                 log.debug("Send new read rows request");
                 RequestHandler requestHandler =
                     new RequestHandler(tableUri, rowRequest, fetchSize, future, cellConsumer);
-                issueRequest(requestHandler, lastQualifierRef);
+                issueRequest(requestHandler, lastQualifierRef, false);
             }
         }
 
@@ -97,7 +96,7 @@ class LimitedCellsRequestEmitter {
             future.fail(throwable);
         }
 
-        private ReadRowsRequest buildRequest(ByteString startQualifierOpen) {
+        private ReadRowsRequest buildRequest(ByteString startQualifier, boolean closed) {
             RowSet.Builder rowSetBuilder = RowSet.newBuilder();
             rowSetBuilder.addRowKeys(rowRequest.getRowKey());
 
@@ -107,11 +106,16 @@ class LimitedCellsRequestEmitter {
 
             RowFilter.Chain.Builder chain = RowFilter.Chain.newBuilder();
 
+
             ColumnRange.Builder columnRange = ColumnRange
                 .newBuilder()
                 .setFamilyName(rowRequest.getColumnFamily())
-                .setStartQualifierOpen(startQualifierOpen)
-                .setEndQualifierClosed(rowRequest.getEndQualifierClosed());
+                .setEndQualifierOpen(rowRequest.getEndQualifierOpen());
+            if (closed) {
+                columnRange.setStartQualifierClosed(startQualifier);
+            } else {
+                columnRange.setStartQualifierOpen(startQualifier);
+            }
 
             chain.addFilters(RowFilter.newBuilder().setColumnRangeFilter(columnRange.build()));
             chain.addFilters(RowFilter.newBuilder().setCellsPerColumnLimitFilter(1));
@@ -130,12 +134,14 @@ class LimitedCellsRequestEmitter {
         int fetchSize = optionalFetchSize.orElse(DEFAULT_FETCH_SIZE);
         RequestHandler requestHandler =
             new RequestHandler(tableUri, request, fetchSize, future, consumer);
-        issueRequest(requestHandler, request.getStartQualifierOpen());
+        issueRequest(requestHandler, request.getStartQualifierClosed(), true);
         return future;
     }
 
-    private void issueRequest(RequestHandler requestHandler, ByteString startQualifierOpen) {
-        ReadRowsRequest request = requestHandler.buildRequest(startQualifierOpen);
+    private void issueRequest(
+        RequestHandler requestHandler, ByteString startQualifier, boolean closed
+    ) {
+        ReadRowsRequest request = requestHandler.buildRequest(startQualifier, closed);
         ListenableFuture<?> future = requestIssuer.apply(request, requestHandler);
         Futures.addCallback(future, requestHandler);
     }

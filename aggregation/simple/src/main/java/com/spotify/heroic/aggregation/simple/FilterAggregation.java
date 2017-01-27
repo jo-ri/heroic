@@ -28,13 +28,13 @@ import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.aggregation.RetainQuotaWatcher;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.common.TimeRange;
 
 import java.util.List;
 import java.util.Map;
@@ -54,7 +54,7 @@ public abstract class FilterAggregation implements AggregationInstance {
     private final FilterStrategy filterStrategy;
 
     @Override
-    public long estimate(DateRange range) {
+    public long estimate(TimeRange range) {
         return INNER.estimate(range);
     }
 
@@ -83,7 +83,7 @@ public abstract class FilterAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
+    public AggregationSession session(TimeRange range, RetainQuotaWatcher quotaWatcher) {
         return new Session(filterStrategy, INNER.session(range, quotaWatcher));
     }
 

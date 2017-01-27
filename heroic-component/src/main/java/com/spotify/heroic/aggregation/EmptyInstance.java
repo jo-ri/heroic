@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
@@ -37,6 +36,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.common.TimeRange;
 
 import java.util.Iterator;
 import java.util.List;
@@ -56,12 +56,12 @@ public class EmptyInstance implements AggregationInstance {
     public static final EmptyInstance INSTANCE = new EmptyInstance();
 
     @Override
-    public long estimate(DateRange range) {
+    public long estimate(TimeRange range) {
         return -1;
     }
 
     @Override
-    public AggregationSession session(final DateRange range, final RetainQuotaWatcher watcher) {
+    public AggregationSession session(final TimeRange range, final RetainQuotaWatcher watcher) {
         return new CollectorSession(watcher);
     }
 

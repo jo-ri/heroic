@@ -58,7 +58,12 @@ public enum Feature {
     /**
      * Enable feature to cause data to be fetched in slices.
      */
-    SLICED_DATA_FETCH("com.spotify.heroic.sliced_data_fetch");
+    SLICED_DATA_FETCH("com.spotify.heroic.sliced_data_fetch"),
+
+    /**
+     * Enable feature to cause query range to be interpreted as [start, end)
+     */
+    QUERY_RANGE_CLOSED_START("com.spotify.heroic.query_range_has_closed_start");
 
     private final String id;
 

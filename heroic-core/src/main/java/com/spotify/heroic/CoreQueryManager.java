@@ -23,6 +23,7 @@ package com.spotify.heroic;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSortedSet;
+
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
@@ -40,6 +41,7 @@ import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.DefaultScope;
@@ -72,11 +74,13 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Transform;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -84,8 +88,10 @@ import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
 import javax.inject.Inject;
 import javax.inject.Named;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -211,8 +217,8 @@ public class CoreQueryManager implements QueryManager {
 
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
-            final AggregationContext context =
-                AggregationContext.defaultInstance(cadenceFromRange(rawRange));
+            final AggregationContext context = AggregationContext.defaultInstance(
+                cadenceFromDuration(rawRange.end() - rawRange.start()));
             final AggregationInstance root = aggregation.apply(context);
 
             final AggregationInstance aggregationInstance;
@@ -232,8 +238,11 @@ public class CoreQueryManager implements QueryManager {
                 () -> buildShiftedRange(rawRange, aggregationInstance.cadence(), now),
                 () -> rawRange);
 
+            final TimeRange timeRange = new TimeRange(range.start(), range.end(),
+                !features.hasFeature(Feature.QUERY_RANGE_CLOSED_START));
+
             if (features.hasFeature(Feature.DETERMINISTIC_AGGREGATIONS) &&
-                aggregationInstance.estimate(range) < 0) {
+                aggregationInstance.estimate(timeRange) < 0) {
                 return async.resolved(QueryResult.error(range,
                     "Aggregation can not be evaluated with deterministic resources",
                     shardWatch.end()));
@@ -242,13 +251,13 @@ public class CoreQueryManager implements QueryManager {
             final AggregationCombiner combiner;
 
             if (isDistributed) {
-                combiner = new DistributedAggregationCombiner(root.reducer(), range);
+                combiner = new DistributedAggregationCombiner(root.reducer(), timeRange);
             } else {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                new FullQuery.Request(source, filter, timeRange, aggregationInstance, options,
                     queryContext, features);
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);
@@ -442,9 +451,8 @@ public class CoreQueryManager implements QueryManager {
 
     public static final long INTERVAL_GOAL = 240;
 
-    private Duration cadenceFromRange(final DateRange range) {
-        final long diff = range.diff();
-        final long nominal = diff / INTERVAL_GOAL;
+    private Duration cadenceFromDuration(final long duration) {
+        final long nominal = duration / INTERVAL_GOAL;
 
         final SortedSet<Long> results = INTERVAL_FACTORS.headSet(nominal);
 

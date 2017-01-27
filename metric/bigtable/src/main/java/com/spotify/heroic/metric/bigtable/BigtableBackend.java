@@ -50,6 +50,7 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient.CellConsumer;
@@ -417,8 +418,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 .rowKey(p.request.getRowKey())
                 .filter(RowFilter.chain(Arrays.asList(RowFilter
                     .newColumnRangeBuilder(p.request.getColumnFamily())
-                    .startQualifierOpen(p.request.getStartQualifierOpen())
-                    .endQualifierClosed(p.request.getEndQualifierClosed())
+                    .startQualifierClosed(p.request.getStartQualifierClosed())
+                    .endQualifierOpen(p.request.getEndQualifierOpen())
                     .build(), RowFilter.onlyLatestCell())))
                 .build());
 
@@ -498,25 +499,19 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     List<PreparedQuery> ranges(
-        final Series series, final DateRange range, final String columnFamily,
+        final Series series, final TimeRange range, final String columnFamily,
         final BiFunction<Long, ByteString, Metric> deserializer
     ) throws IOException {
         final List<PreparedQuery> bases = new ArrayList<>();
 
-        final long start = base(range.getStart());
-        final long end = base(range.getEnd());
-
-        for (long base = start; base <= end; base += PERIOD) {
-            final DateRange modified = range.modify(base, base + PERIOD);
-
-            if (modified.isEmpty()) {
-                continue;
-            }
+        for (TimeRange period : range.splitAtPeriodBoundary(PERIOD)) {
+            DateRange closedStartRange = period.asClosedStartDateRange();
+            long base = base(closedStartRange.getStart());
 
             final RowKey key = new RowKey(series, base);
             final ByteString keyBlob = serialize(key, rowKeySerializer);
-            final ByteString startKey = serializeOffset(offset(modified.start()));
-            final ByteString endKey = serializeOffset(offset(modified.end()));
+            final ByteString startKey = serializeOffset(offset(closedStartRange.getStart()));
+            final ByteString endKey = serializeOffset(offset(closedStartRange.getEnd()));
 
             final ReadRowRangeRequest request =
                 new ReadRowRangeRequest(keyBlob, columnFamily, startKey, endKey);

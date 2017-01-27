@@ -25,30 +25,30 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.spotify.heroic.common.DateRange;
+
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.Payload;
+import com.spotify.heroic.common.TimeRange;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.LongAdder;
+
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 /**
  * A base aggregation that collects data in 'buckets', one for each sampled data point.
@@ -72,8 +72,8 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         ImmutableSet.of(MetricType.POINT, MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP,
             MetricType.CARDINALITY);
 
-    protected final long size;
-    protected final long extent;
+    protected final long size; // interval between bucket timestamps
+    protected final long extent; // width of each bucket
 
     @Getter(AccessLevel.NONE)
     private final Set<MetricType> input;
@@ -88,6 +88,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
         private final List<B> buckets;
         private final long offset;
+        private final boolean offsetMarksEnd;
 
         @Override
         public void updatePoints(
@@ -143,48 +144,28 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
                     continue;
                 }
 
-                final Iterator<B> buckets = matching(m);
+                int startIndex;
+                int endIndex;
 
-                while (buckets.hasNext()) {
-                    consumer.apply(buckets.next(), m);
+                if (offsetMarksEnd) {
+                    long distanceFromEnd = offset - m.getTimestamp();
+                    startIndex = buckets.size() - (int) Math.floorDiv(distanceFromEnd, size) - 1;
+                    endIndex =
+                        buckets.size() - (int) Math.floorDiv(distanceFromEnd - extent, size) - 1;
+                } else {
+                    long distanceFromStart = m.getTimestamp() - offset;
+                    startIndex = (int) Math.floorDiv(distanceFromStart - extent, size) + 1;
+                    endIndex = (int) Math.floorDiv(distanceFromStart, size) + 1;
+                }
+
+                for (int i = Math.max(startIndex, 0); i < Math.min(endIndex, buckets.size()); i++) {
+                    consumer.apply(buckets.get(i), m);
                 }
 
                 sampleSize += 1;
             }
 
             this.sampleSize.add(sampleSize);
-        }
-
-        private Iterator<B> matching(final Metric m) {
-            final long ts = m.getTimestamp() - offset - 1;
-            final long te = ts + extent;
-
-            if (te < 0) {
-                return Collections.emptyIterator();
-            }
-
-            // iterator that iterates from the largest to the smallest matching bucket for _this_
-            // metric.
-            return new Iterator<B>() {
-                long current = te;
-
-                @Override
-                public boolean hasNext() {
-                    while ((current / size) >= buckets.size()) {
-                        current -= size;
-                    }
-
-                    final long m = current % size;
-                    return (current >= 0 && current > ts) && (m >= 0 && m < extent);
-                }
-
-                @Override
-                public B next() {
-                    final int index = (int) (current / size);
-                    current -= size;
-                    return buckets.get(index);
-                }
-            };
         }
 
         @Override
@@ -213,19 +194,30 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public long estimate(DateRange original) {
+    public long estimate(TimeRange original) {
         if (size == 0) {
             return 0;
         }
 
-        return original.rounded(size).diff() / size;
+        return calculateBucketCount(original.duration());
     }
 
     @Override
-    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
-        final List<B> buckets = buildBuckets(range, size);
-        quotaWatcher.retainData(buckets.size());
-        return new Session(buckets, range.start());
+    public AggregationSession session(TimeRange range, RetainQuotaWatcher quotaWatcher) {
+        long bucketCount = calculateBucketCount(range.duration());
+        if (bucketCount < 1 || bucketCount > MAX_BUCKET_COUNT) {
+            throw new IllegalArgumentException(
+                String.format("duration %s, size %d", range.duration(), size));
+        }
+        quotaWatcher.retainData(bucketCount);
+        if (range.isOpenStart()) {
+            long firstBucketAt = range.getEnd() - size * (bucketCount - 1);
+            List<B> buckets = buildBuckets((int) bucketCount, firstBucketAt);
+            return new Session(buckets, range.getEnd(), true);
+        } else {
+            List<B> buckets = buildBuckets((int) bucketCount, range.getStart());
+            return new Session(buckets, range.getStart(), false);
+        }
     }
 
     @Override
@@ -243,21 +235,18 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
 
-    private List<B> buildBuckets(final DateRange range, long size) {
-        final long start = range.start();
-        final long count = (range.diff() + size) / size;
+    private List<B> buildBuckets(int bucketCount, long firstBucketAt) {
+        final List<B> buckets = new ArrayList<>(bucketCount);
 
-        if (count < 1 || count > MAX_BUCKET_COUNT) {
-            throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
-        }
-
-        final List<B> buckets = new ArrayList<>((int) count);
-
-        for (int i = 0; i < count; i++) {
-            buckets.add(buildBucket(start + size * i));
+        for (int i = 0; i < bucketCount; i++) {
+            buckets.add(buildBucket(firstBucketAt + size * i));
         }
 
         return buckets;
+    }
+
+    private long calculateBucketCount(long duration) {
+        return (duration + size - 1) / size;
     }
 
     protected abstract B buildBucket(long timestamp);
