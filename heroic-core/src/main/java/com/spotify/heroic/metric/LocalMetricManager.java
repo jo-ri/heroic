@@ -24,6 +24,7 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
@@ -49,13 +50,12 @@ import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
+
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.ArrayList;
@@ -66,8 +66,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
 import javax.inject.Inject;
 import javax.inject.Named;
+
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString(of = {})
@@ -232,7 +237,7 @@ public class LocalMetricManager implements MetricManager {
                                 new ConcurrentLinkedQueue<>();
 
                             @Override
-                            public void resolved(FetchData.Result result) throws Exception {
+                            public void resolved(final FetchData.Result result) throws Exception {
                                 traces.add(result.getTrace());
                                 super.resolved(result);
                             }
@@ -311,8 +316,8 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<FetchData.Result> fetch(
-            FetchData.Request request, FetchQuotaWatcher watcher,
-            Consumer<MetricCollection> metricsConsumer
+            final FetchData.Request request, final FetchQuotaWatcher watcher,
+            final Consumer<MetricCollection> metricsConsumer
         ) {
             final List<AsyncFuture<FetchData.Result>> callbacks =
                 map(b -> b.fetch(request, watcher, metricsConsumer));

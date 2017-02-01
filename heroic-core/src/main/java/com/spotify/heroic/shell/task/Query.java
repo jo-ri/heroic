@@ -121,7 +121,7 @@ public class Query implements ShellTask {
                         .println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
                             indent.writeValueAsString(resultGroup.getSeries())));
                     io.out().println(indent.writeValueAsString(group.getData()));
-                io.out().flush();
+                    io.out().flush();
                 }
 
                 io.out().println("TRACE:");

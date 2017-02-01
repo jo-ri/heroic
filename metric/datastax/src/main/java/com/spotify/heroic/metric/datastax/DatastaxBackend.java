@@ -154,7 +154,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 c.schema.ranges(request.getSeries(), request.getRange());
 
             if (request.getType() == MetricType.POINT) {
-                List<AsyncFuture<FetchData>> fetches =
+                final List<AsyncFuture<FetchData>> fetches =
                     fetchDataPoints(w, limit, request.getOptions(), prepared, c);
                 return async.collect(fetches, FetchData.collect(FETCH));
             }
@@ -182,10 +182,10 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 c.schema.ranges(request.getSeries(), request.getRange());
 
             if (request.getType() == MetricType.POINT) {
-                List<AsyncFuture<FetchData>> fetches =
+                final List<AsyncFuture<FetchData>> fetches =
                     fetchDataPoints(w, limit, request.getOptions(), prepared, c);
 
-                List<AsyncFuture<FetchData.Result>> results =
+                final List<AsyncFuture<FetchData.Result>> results =
                     Lists.transform(fetches, fetch -> fetch.directTransform(fetchData -> {
                         fetchData.getGroups().forEach(metricsConsumer::accept);
                         return fetchData.getResult();

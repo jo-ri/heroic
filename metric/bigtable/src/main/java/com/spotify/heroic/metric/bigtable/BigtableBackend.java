@@ -215,7 +215,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     @Deprecated
-    public AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher) {
+    public AsyncFuture<FetchData> fetch(
+        final FetchData.Request request, final FetchQuotaWatcher watcher
+    ) {
         return connection.doto(c -> {
             final MetricType type = request.getType();
 
@@ -235,14 +237,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         });
     }
 
-    private List<PreparedQuery> pointsRanges(FetchData.Request request) throws IOException {
+    private List<PreparedQuery> pointsRanges(final FetchData.Request request) throws IOException {
         return ranges(request.getSeries(), request.getRange(), POINTS, (t, d) -> {
             final double value = deserializeValue(d);
             return new Point(t, value);
         });
     }
 
-    private List<PreparedQuery> eventsRanges(FetchData.Request request) throws IOException {
+    private List<PreparedQuery> eventsRanges(final FetchData.Request request) throws IOException {
         return ranges(request.getSeries(), request.getRange(), EVENTS, (t, d) -> {
             try {
                 return new Event(t, mapper.readValue(d.toByteArray(), PAYLOAD_TYPE));
@@ -254,7 +256,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     public AsyncFuture<FetchData.Result> fetch(
-        FetchData.Request request, FetchQuotaWatcher watcher, Consumer<MetricCollection> consumer
+        final FetchData.Request request, final FetchQuotaWatcher watcher,
+        final Consumer<MetricCollection> consumer
     ) {
         return connection.doto(c -> {
             final MetricType type = request.getType();
@@ -590,7 +593,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         private final BiFunction<Long, ByteString, Metric> deserializer;
         private final long base;
 
-        private Metric deserialize(ByteString qualifier, ByteString value) {
+        private Metric deserialize(final ByteString qualifier, final ByteString value) {
             final long timestamp = base + deserializeOffset(qualifier);
             return deserializer.apply(timestamp, value);
         }
