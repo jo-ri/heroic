@@ -104,6 +104,8 @@ public class Fetch implements ShellTask {
 
         final QueryOptions.Builder optionsBuilder =
             QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
+        params.fetchSize.ifPresent(optionsBuilder::fetchSize);
+
         final QueryOptions options = optionsBuilder.build();
 
         final Consumer<MetricCollection> printMetricsCollection = g -> {
@@ -201,6 +203,10 @@ public class Fetch implements ShellTask {
 
         @Option(name = "--sliced-data-fetch", usage = "Enable sliced data fetch")
         private boolean slicedDataFetch = false;
+
+        @Option(name = "--fetch-size", usage = "Set the number of entries to fetch for every slice")
+        private Optional<Integer> fetchSize = Optional.empty();
+
     }
 
     public static Fetch setup(final CoreComponent core) {

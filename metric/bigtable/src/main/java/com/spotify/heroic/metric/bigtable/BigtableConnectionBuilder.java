@@ -36,12 +36,13 @@ import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @ToString(of = {"project", "instance", "credentials"})
 @RequiredArgsConstructor
@@ -59,6 +60,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
+    private final Optional<Integer> defaultFetchSize;
 
     @Override
     public BigtableConnection call() throws Exception {
@@ -87,16 +89,17 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         final BigtableTableAdminClient adminClient =
             new BigtableTableTableAdminClientImpl(async, session.getTableAdminClient(), project,
-              instance);
+                instance);
 
         final BigtableMutator mutator =
             new BigtableMutatorImpl(async, session, disableBulkMutations, flushIntervalSeconds);
 
         final BigtableDataClient client =
-            new BigtableDataClientImpl(async, session, mutator, project, instance);
+            new BigtableDataClientImpl(async, session, mutator, project, instance,
+                defaultFetchSize);
 
-        return new GrpcBigtableConnection(
-            async, project, instance, session, mutator, adminClient, client);
+        return new GrpcBigtableConnection(async, project, instance, session, mutator,
+            adminClient, client);
     }
 
     @RequiredArgsConstructor
