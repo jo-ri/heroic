@@ -86,7 +86,7 @@ class LimitedCellsRequestEmitter {
                 future.resolve(null);
             } else {
                 log.debug("Send new read rows request");
-                RequestHandler requestHandler =
+                final RequestHandler requestHandler =
                     new RequestHandler(tableUri, rowRequest, fetchSize, future, cellConsumer);
                 issueRequest(requestHandler, lastQualifierRef);
             }
@@ -97,17 +97,17 @@ class LimitedCellsRequestEmitter {
             future.fail(throwable);
         }
 
-        private ReadRowsRequest buildRequest(ByteString startQualifierOpen) {
-            RowSet.Builder rowSetBuilder = RowSet.newBuilder();
+        private ReadRowsRequest buildRequest(final ByteString startQualifierOpen) {
+            final RowSet.Builder rowSetBuilder = RowSet.newBuilder();
             rowSetBuilder.addRowKeys(rowRequest.getRowKey());
 
-            ReadRowsRequest.Builder requestBuilder = ReadRowsRequest.newBuilder();
+            final ReadRowsRequest.Builder requestBuilder = ReadRowsRequest.newBuilder();
             requestBuilder.setTableName(tableUri);
             requestBuilder.setRows(rowSetBuilder.build());
 
-            RowFilter.Chain.Builder chain = RowFilter.Chain.newBuilder();
+            final RowFilter.Chain.Builder chain = RowFilter.Chain.newBuilder();
 
-            ColumnRange.Builder columnRange = ColumnRange
+            final ColumnRange.Builder columnRange = ColumnRange
                 .newBuilder()
                 .setFamilyName(rowRequest.getColumnFamily())
                 .setStartQualifierOpen(startQualifierOpen)
@@ -123,20 +123,20 @@ class LimitedCellsRequestEmitter {
     }
 
     public AsyncFuture<Void> readRow(
-        String tableUri, ReadRowRangeRequest request, Optional<Integer> optionalFetchSize,
-        CellConsumer consumer
+        final String tableUri, final ReadRowRangeRequest request, final Optional<Integer> optionalFetchSize,
+        final CellConsumer consumer
     ) {
-        ResolvableFuture<Void> future = async.future();
-        int fetchSize = optionalFetchSize.orElse(DEFAULT_FETCH_SIZE);
-        RequestHandler requestHandler =
+        final ResolvableFuture<Void> future = async.future();
+        final int fetchSize = optionalFetchSize.orElse(DEFAULT_FETCH_SIZE);
+        final RequestHandler requestHandler =
             new RequestHandler(tableUri, request, fetchSize, future, consumer);
         issueRequest(requestHandler, request.getStartQualifierOpen());
         return future;
     }
 
-    private void issueRequest(RequestHandler requestHandler, ByteString startQualifierOpen) {
-        ReadRowsRequest request = requestHandler.buildRequest(startQualifierOpen);
-        ListenableFuture<?> future = requestIssuer.apply(request, requestHandler);
+    private void issueRequest(final RequestHandler requestHandler, final ByteString startQualifierOpen) {
+        final ReadRowsRequest request = requestHandler.buildRequest(startQualifierOpen);
+        final ListenableFuture<?> future = requestIssuer.apply(request, requestHandler);
         Futures.addCallback(future, requestHandler);
     }
 }

@@ -90,8 +90,8 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         final String tableName, final ReadRowRangeRequest request,
         final Optional<Integer> fetchSize, final CellConsumer cellConsumer
     ) {
-        String tableUri = Table.toURI(clusterUri, tableName);
-        Optional<Integer> fetchSizeOrDefault = fetchSize.isPresent() ? fetchSize : defaultFetchSize;
+        final String tableUri = Table.toURI(clusterUri, tableName);
+        final Optional<Integer> fetchSizeOrDefault = fetchSize.isPresent() ? fetchSize : defaultFetchSize;
         return rangeReader.readRow(tableUri, request, fetchSizeOrDefault, cellConsumer);
     }
 

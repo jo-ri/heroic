@@ -450,7 +450,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private AsyncFuture<FetchData.Result> fetchBatch(
-        final FetchQuotaWatcher watcher, final MetricType type, QueryOptions options,
+        final FetchQuotaWatcher watcher, final MetricType type, final QueryOptions options,
         final List<PreparedQuery> prepared, final BigtableConnection c,
         final Consumer<MetricCollection> metricsConsumer
     ) {
